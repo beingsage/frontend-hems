@@ -475,3 +475,5 @@ export class TimeSeriesDB {
 }
 
 export const getTimeSeriesDB = () => TimeSeriesDB.getInstance()
+export const timeSeriesDB = TimeSeriesDB.getInstance()  // Export instance directly
+

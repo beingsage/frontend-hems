@@ -214,3 +214,5 @@ export class OptimizationEngine {
 }
 
 export const getOptimizationEngine = () => OptimizationEngine.getInstance()
+export const optimizationEngine = OptimizationEngine.getInstance()  // Export instance directly
+

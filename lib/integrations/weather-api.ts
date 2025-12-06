@@ -109,3 +109,6 @@ export class WeatherAPI {
     ]
   }
 }
+
+const weatherAPIInstance = new WeatherAPI(process.env.WEATHER_API_KEY || "demo-key")
+export const weatherAPI = weatherAPIInstance

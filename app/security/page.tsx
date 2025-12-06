@@ -1,7 +1,7 @@
 "use client"
 
 import { ProtectedRoute } from "@/components/protected-route"
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { AppSidebar } from "@/components/layout/app-sidebar"
 import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -14,13 +14,29 @@ import { dataPrivacyManager } from "@/lib/security/data-privacy"
 
 export default function SecurityPage() {
   const [activeTab, setActiveTab] = useState("audit")
+  const [users, setUsers] = useState<any[]>([])
+  const [isLoading, setIsLoading] = useState(true)
 
   // Get audit logs
   const auditLogs = auditLogger.getAuditLogs().slice(0, 20)
   const securityEvents = auditLogger.getSecurityEvents()
 
-  // Get users
-  const users = rbacManager.getAllUsers()
+  // Load users
+  useEffect(() => {
+    const loadUsers = async () => {
+      try {
+        const loadedUsers = await rbacManager.getAllUsers()
+        setUsers(loadedUsers)
+      } catch (error) {
+        console.error("Error loading users:", error)
+        setUsers([])
+      } finally {
+        setIsLoading(false)
+      }
+    }
+
+    loadUsers()
+  }, [])
 
   // Mock export requests
   const exportRequests = [

@@ -242,3 +242,5 @@ export class AnomalyDetector {
 }
 
 export const getAnomalyDetector = () => AnomalyDetector.getInstance()
+export const anomalyDetector = AnomalyDetector.getInstance()  // Export instance directly
+

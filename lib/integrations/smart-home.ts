@@ -74,3 +74,5 @@ export class SmartHomeIntegration {
 }
 
 export const smartHomeIntegration = new SmartHomeIntegration()
+export const smartHome = smartHomeIntegration  // Export for compatibility
+

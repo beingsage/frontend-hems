@@ -295,3 +295,5 @@ export class PatternRecognition {
 }
 
 export const getPatternRecognition = () => PatternRecognition.getInstance()
+export const patternRecognition = PatternRecognition.getInstance()  // Export instance directly
+
