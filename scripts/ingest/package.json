@@ -1,0 +1,21 @@
+{
+  "name": "iot-ingest-worker",
+  "version": "1.0.0",
+  "description": "MQTT ingest worker for IoT Energy Monitor",
+  "main": "index.ts",
+  "scripts": {
+    "start": "node index.ts",
+    "dev": "tsx watch index.ts"
+  },
+  "dependencies": {
+    "mqtt": "^5.3.5",
+    "pg": "^8.11.3",
+    "ioredis": "^5.3.2",
+    "socket.io-client": "^4.7.4"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.5",
+    "tsx": "^4.7.0",
+    "typescript": "^5.3.3"
+  }
+}

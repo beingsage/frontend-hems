@@ -1,0 +1,151 @@
+version: '3.8'
+
+services:
+  # TimescaleDB for time-series data
+  timescaledb:
+    image: timescale/timescaledb:latest-pg16
+    container_name: iot-timescaledb
+    environment:
+      POSTGRES_DB: iot_energy
+      POSTGRES_USER: iot_user
+      POSTGRES_PASSWORD: iot_password
+    ports:
+      - "5432:5432"
+    volumes:
+      - timescale_data:/var/lib/postgresql/data
+      - ./scripts/db:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U iot_user -d iot_energy"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Redis for caching and message queues
+  redis:
+    image: redis:7-alpine
+    container_name: iot-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+  # MQTT Broker (Mosquitto)
+  mqtt:
+    image: eclipse-mosquitto:2
+    container_name: iot-mqtt
+    ports:
+      - "1883:1883"
+      - "9001:9001"
+    volumes:
+      - ./scripts/mqtt/mosquitto.conf:/mosquitto/config/mosquitto.conf
+      - mqtt_data:/mosquitto/data
+      - mqtt_logs:/mosquitto/log
+    healthcheck:
+      test: ["CMD-SHELL", "mosquitto_sub -t '$$SYS/#' -C 1 | grep -v Error || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # MQTT Ingest Worker
+  ingest:
+    build:
+      context: .
+      dockerfile: scripts/ingest/Dockerfile
+    container_name: iot-ingest
+    environment:
+      MQTT_URL: mqtt://mqtt:1883
+      DATABASE_URL: postgresql://iot_user:iot_password@timescaledb:5432/iot_energy
+      REDIS_URL: redis://redis:6379
+      SOCKETIO_URL: http://backend:4000
+    depends_on:
+      mqtt:
+        condition: service_healthy
+      timescaledb:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # ML Engine (Python FastAPI)
+  ml:
+    build:
+      context: .
+      dockerfile: scripts/ml/Dockerfile
+    container_name: iot-ml
+    ports:
+      - "8000:8000"
+    environment:
+      DATABASE_URL: postgresql://iot_user:iot_password@timescaledb:5432/iot_energy
+      REDIS_URL: redis://redis:6379
+    depends_on:
+      timescaledb:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # Automation Engine
+  automation:
+    build:
+      context: .
+      dockerfile: scripts/automation/Dockerfile
+    container_name: iot-automation
+    environment:
+      DATABASE_URL: postgresql://iot_user:iot_password@timescaledb:5432/iot_energy
+      REDIS_URL: redis://redis:6379
+      MQTT_URL: mqtt://mqtt:1883
+    depends_on:
+      timescaledb:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      mqtt:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # Backend API + Socket.IO (Next.js)
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: iot-backend
+    ports:
+      - "3000:3000"
+      - "4000:4000"
+    environment:
+      DATABASE_URL: postgresql://iot_user:iot_password@timescaledb:5432/iot_energy
+      REDIS_URL: redis://redis:6379
+      ML_SERVICE_URL: http://ml:8000
+      NODE_ENV: production
+    depends_on:
+      timescaledb:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # Device Simulator (for testing)
+  simulator:
+    build:
+      context: .
+      dockerfile: scripts/simulator/Dockerfile
+    container_name: iot-simulator
+    environment:
+      MQTT_URL: mqtt://mqtt:1883
+      NUM_DEVICES: 10
+      INTERVAL_MS: 2000
+    depends_on:
+      mqtt:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  timescale_data:
+  redis_data:
+  mqtt_data:
+  mqtt_logs:
